@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Evaluador de Prendas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .btn-group {
+      margin-bottom: 10px;
+    }
+
+    .btn-group button {
+      padding: 10px;
+      margin-right: 5px;
+      cursor: pointer;
+      border: 2px solid #007BFF;
+      background-color: #f0f0f0;
+      color: #007BFF;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .btn-group button.selected {
+      background-color: #007BFF;
+      color: white;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    #resultado,
+    #historial {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+    }
+
+    #historial ul {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Evaluador de Prendas</h1>
+
+  <div id="menu-principal" class="section">
+    <button onclick="iniciarEvaluacion()">Comenzar nueva evaluación</button>
+  </div>
+
+  <div id="evaluacion" class="hidden">
+    <div class="btn-group" id="grupo-tipo">
+        <div style="display: inline-block; text-align: center; margin-right: 10px;">
+          <button onclick="seleccionar('tipo', 'basico')">Básico</button>
+          <div style="font-size: 12px; margin-top: 4px;">(tops y bottoms)</div>
+        </div>
+        <div style="display: inline-block; text-align: center;">
+          <button onclick="seleccionar('tipo', 'especifico')">Específico</button>
+          <div style="font-size: 12px; margin-top: 4px;">(vestido, overol, chamarra)</div>
+        </div>
+      </div>
+
+    <div class="section">
+      <h2>2. Marca</h2>
+      <div class="btn-group" id="grupo-marca">
+        <button onclick="seleccionar('marca', 'fast fashion')">Fast Fashion</button>
+        <button onclick="seleccionar('marca', 'vintage')">Vintage</button>
+        <button onclick="seleccionar('marca', 'lujo')">Lujo</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>3. Estado</h2>
+      <div class="btn-group" id="grupo-estado">
+        <button onclick="seleccionar('estado', 'nuevo')">Nuevo</button>
+        <button onclick="seleccionar('estado', 'bueno')">Bueno</button>
+        <button onclick="seleccionar('estado', 'presentar')">Presentar</button>
+        <button onclick="seleccionar('estado', 'reparar')">Reparar</button>
+      </div>
+    </div>
+
+    <button onclick="registrarPrenda()">Registrar prenda</button>
+    <button onclick="terminarEvaluacion()">Terminar evaluación</button>
+
+    <div id="resultado"></div>
+    <div id="historial">
+      <h3>Prendas registradas:</h3>
+      <ul id="lista-prendas"></ul>
+      <strong>Total tokens acumulados: <span id="totalTokens">0</span></strong>
+    </div>
+  </div>
+
+  <script>
+    let prendaSeleccion = {
+      tipo: null,
+      marca: null,
+      estado: null
+    };
+
+    let prendasRegistradas = [];
+    let totalTokens = 0;
+
+    function iniciarEvaluacion() {
+      document.getElementById("menu-principal").classList.add("hidden");
+      document.getElementById("evaluacion").classList.remove("hidden");
+      resetSeleccion();
+    }
+
+    function seleccionar(categoria, valor) {
+      prendaSeleccion[categoria] = valor;
+
+      // Limpiar selección visual previa de la categoría
+      const grupo = document.getElementById(`grupo-${categoria}`);
+      const botones = grupo.querySelectorAll("button");
+      botones.forEach(btn => btn.classList.remove("selected"));
+
+      // Activar visualmente el botón presionado
+      const botonSeleccionado = Array.from(botones).find(btn => btn.textContent.toLowerCase().includes(valor));
+      if (botonSeleccionado) {
+        botonSeleccionado.classList.add("selected");
+      }
+    }
+
+    function registrarPrenda() {
+      const { tipo, marca, estado } = prendaSeleccion;
+
+      if (!tipo || !marca || !estado) {
+        alert("Por favor, selecciona tipo, marca y estado de la prenda.");
+        return;
+      }
+
+      const resultado = evaluarPrenda(tipo, marca, estado);
+      totalTokens += resultado.tokens;
+
+      // Mostrar resultado individual
+      document.getElementById("resultado").innerHTML = `
+        <p><strong>Puntos:</strong> ${resultado.puntos}</p>
+        <p><strong>Tokens generados:</strong> ${resultado.tokens}</p>
+      `;
+
+      // Agregar al historial
+      prendasRegistradas.push({ tipo, marca, estado, tokens: resultado.tokens });
+      const li = document.createElement("li");
+      li.textContent = `Prenda: ${tipo}, ${marca}, ${estado} - Tokens: ${resultado.tokens}`;
+      document.getElementById("lista-prendas").appendChild(li);
+
+      document.getElementById("totalTokens").textContent = totalTokens;
+
+      resetSeleccion();
+    }
+
+    function terminarEvaluacion() {
+      alert(`Evaluación finalizada. Total tokens acumulados: ${totalTokens}`);
+      // Resetear todo
+      prendasRegistradas = [];
+      totalTokens = 0;
+      document.getElementById("lista-prendas").innerHTML = "";
+      document.getElementById("totalTokens").textContent = "0";
+      document.getElementById("resultado").innerHTML = "";
+      document.getElementById("evaluacion").classList.add("hidden");
+      document.getElementById("menu-principal").classList.remove("hidden");
+    }
+
+    function resetSeleccion() {
+      prendaSeleccion = { tipo: null, marca: null, estado: null };
+
+      // Quitar clases seleccionadas de todos los botones
+      ['tipo', 'marca', 'estado'].forEach(cat => {
+        const botones = document.getElementById(`grupo-${cat}`).querySelectorAll("button");
+        botones.forEach(btn => btn.classList.remove("selected"));
+      });
+    }
+
+    function evaluarPrenda(prendaTipo, marca, estado) {
+      let puntos = 0;
+
+      // Tipo de prenda
+      if (prendaTipo === 'basico') {
+        puntos += 50;
+      } else if (prendaTipo === 'especifico') {
+        puntos += 80;
+      }
+
+      // Marca
+      switch (marca) {
+        case 'fast fashion':
+          puntos += 20;
+          break;
+        case 'vintage':
+          puntos += 50;
+          break;
+        case 'lujo':
+          puntos += 100;
+          break;
+      }
+
+      // Estado
+      switch (estado) {
+        case 'nuevo':
+          puntos += 100;
+          break;
+        case 'bueno':
+          puntos += 70;
+          break;
+        case 'presentar':
+          puntos += 40;
+          break;
+        case 'reparar':
+          puntos += 20;
+          break;
+      }
+
+      const tokens = Math.round(puntos / 100);
+      return { puntos, tokens };
+    }
+  </script>
+
+</body>
+</html>
+
